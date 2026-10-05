@@ -70,6 +70,15 @@ Pass either a top-level row ID or one of these grouped runtime IDs as
 `instance_id`; the server resolves it to the correct game scope. Per-place port
 tabs such as `58742` are not the supported routing model.
 
+## Closing Studio
+
+`manage_instance` `close` ends the Studio process. First it waits, for up to 15
+seconds, while that Studio is still signing in to Roblox. Roblox can replace the
+stored sign-in during automatic sign-in, and ending Studio before it saves the
+replacement signs the Windows account out of Studio. The wait reads only sign-in
+event names and times from Studio's log. It does not count against the close
+timeout, and a Studio that finished signing in closes without delay.
+
 ## Version compatibility
 
 The Studio plugin and MCP server must have the same version. `/ready` rejects a
@@ -96,11 +105,13 @@ the host OS and crops it to the viewport:
   PowerShell, which reads the composited window even when it is behind other
   windows. A minimized window cannot be captured; the tool says so.
   Initial capture rejects multiple matching windows rather than picking the first
-  one. Clean and cached captures verify the selected window handle and process ID;
+  one. Local-file titles, which show the absolute path, are matched by basename.
+  Clean and cached captures verify the selected window handle and process ID;
   a missing or changed identity fails instead of switching to another client.
 - On macOS 14 or newer, ScreenCaptureKit captures only the selected Roblox Studio
   window. The MCP host must already have Screen Recording permission, and Xcode
-  Command Line Tools must provide `xcrun swiftc`. The helper compiles once per
+  Command Line Tools must provide `xcrun swiftc`; when they are missing the tool
+  reports it instead of opening the macOS installer dialog. The helper compiles once per
   server process before viewport markers are shown; it never prompts for
   permission or captures the desktop. Missing permission, ambiguous matching
   windows, or a changed window identity produce an error instead of capturing
@@ -141,6 +152,7 @@ enumerating or capturing any real windows.
 | `ROBLOX_OPEN_CLOUD_API_KEY` | None | Roblox Open Cloud key used by features such as audio preview and place version access. Required permissions depend on the tool. |
 | `MCP_PLUGINS_DIR` | Platform Studio Plugins folder | Override the destination used by plugin installation. |
 
-Creator Store audio preview requires `asset:read` permission. See
+Creator Store audio preview requires the `legacy-asset:manage` scope (Legacy
+Assets → manage in the API key settings); `asset:read` alone returns 403. See
 [Creator Store assets](creator-store-assets.md) for its download and validation
 behavior.
