@@ -29,6 +29,7 @@ const forceManagedSession = process.argv.includes('--managed');
 
 const FULL_TESTS = [
   'path-resolution.mjs',
+  'script-editing.mjs',
   'property-value-conversion.mjs',
   'luau-payload-transfers.mjs',
   'capture-broker-transfers.mjs',

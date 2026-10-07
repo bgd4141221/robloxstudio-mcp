@@ -1,5 +1,6 @@
 import Utils from "../Utils";
 import Recording from "../Recording";
+import { checkRevision, sourceRevision } from "../ScriptRevision";
 
 const { getInstancePath, getInstanceByPath, readScriptSource, applyScriptSource, splitLines, joinLines } = Utils;
 const { beginRecording, finishRecording } = Recording;
@@ -70,6 +71,7 @@ function getScriptSource(requestData: Record<string, unknown>) {
 			source: sourceToReturn,
 			numberedSource: numberLines(selectedLines, returnedStartLine),
 			sourceLength: fullSource.size(),
+			revision: sourceRevision(instance, fullSource),
 			lineCount: totalLineCount,
 			startLine: returnedStartLine,
 			endLine: returnedEndLine,
@@ -113,19 +115,26 @@ function setScriptSource(requestData: Record<string, unknown>) {
 	const sourceToSet = newSource;
 	const recordingId = beginRecording(`Set script source: ${instance.Name}`);
 
-	const [readSuccess, readResult] = pcall(() => readScriptSource(instance).size());
+	const [readSuccess, readResult] = pcall(() => {
+		const source = readScriptSource(instance);
+		checkRevision(instance, source, requestData.expected_revision);
+		return source;
+	});
 	if (!readSuccess) {
 		finishRecording(recordingId, false);
 		return { error: `Failed to read script source before updating: ${readResult}` };
 	}
-	const oldSourceLength = readResult as number;
-	const applyResult = applyScriptSource(instance, sourceToSet);
+	const oldSourceLength = (readResult as string).size();
+	const applyResult = requestData.expected_revision === undefined
+		? applyScriptSource(instance, sourceToSet)
+		: applyScriptSource(instance, sourceToSet, readResult as string);
 
 	if (applyResult.success) {
 		finishRecording(recordingId, true);
 		return {
 			success: true, instancePath,
 			oldSourceLength, newSourceLength: sourceToSet.size(),
+			revision: sourceRevision(instance, sourceToSet),
 			method: applyResult.method,
 			message: `Script source updated successfully (${applyResult.method === "UpdateSourceAsync" ? "editor-safe" : "direct assignment"})`,
 		};
@@ -157,6 +166,7 @@ function editScriptLines(requestData: Record<string, unknown>) {
 
 	const [success, result] = pcall(() => {
 		const source = readScriptSource(instance);
+		checkRevision(instance, source, requestData.expected_revision);
 		const searchLen = oldString.size();
 		let matchStart: number;
 
@@ -206,6 +216,7 @@ function editScriptLines(requestData: Record<string, unknown>) {
 			success: true,
 			instancePath,
 			method: applyResult.method,
+			revision: sourceRevision(instance, newSource),
 			message: "Script edited successfully",
 		};
 	});
@@ -235,6 +246,7 @@ function insertScriptLines(requestData: Record<string, unknown>) {
 
 	const [success, result] = pcall(() => {
 		const source = readScriptSource(instance);
+		checkRevision(instance, source, requestData.expected_revision);
 		const [lines, hadTrailingNewline] = splitLines(source);
 		const totalLines = lines.size();
 
@@ -257,6 +269,7 @@ function insertScriptLines(requestData: Record<string, unknown>) {
 			linesInserted: newLines.size(),
 			newLineCount: resultLines.size(),
 			method: applyResult.method,
+			revision: sourceRevision(instance, newSource),
 			message: "Script lines inserted successfully",
 		};
 	});
@@ -288,6 +301,7 @@ function deleteScriptLines(requestData: Record<string, unknown>) {
 
 	const [success, result] = pcall(() => {
 		const source = readScriptSource(instance);
+		checkRevision(instance, source, requestData.expected_revision);
 		const [lines, hadTrailingNewline] = splitLines(source);
 		const totalLines = lines.size();
 
@@ -308,6 +322,7 @@ function deleteScriptLines(requestData: Record<string, unknown>) {
 			linesDeleted: endLine - startLine + 1,
 			newLineCount: resultLines.size(),
 			method: applyResult.method,
+			revision: sourceRevision(instance, newSource),
 			message: "Script lines deleted successfully",
 		};
 	});

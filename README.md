@@ -27,6 +27,7 @@ screenshots, memory reports, and profiler captures from each peer.
 ### Work in edit mode
 
 - Run Luau in Studio's edit context with `execute_luau`.
+- [Preview and apply script edits](docs/script-editing.md) with full-source revision checks, or create a script with initial source and an undo recording.
 - Use `set_properties` for instance properties and `find_and_replace_in_scripts` for script text. For project-specific bulk edits, use `execute_luau`.
 - For large generated Luau, use the [verified chunk-staging workflow](docs/large-inputs.md): explicit instance routing, UTF-8 byte/hash readback, ownership-checked cleanup, and bounded recovery without blindly replaying mutations.
 - Use `selection` to inspect or update Studio selection and frame a part or model before capturing the viewport.

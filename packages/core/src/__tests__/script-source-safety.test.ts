@@ -47,12 +47,63 @@ async function loadPluginModule<T>(
     String.prototype.size = function() {
       return String(this).length;
     };
+    String.prototype.sub = function(start, end) {
+      return String(this).slice(start < 0 ? start : start - 1, end);
+    };
+    Array.prototype.size = function() { return this.length; };
   `, context);
   vm.runInContext(buildResult.outputFiles[0].text, context);
   return commonJsModule.exports as T;
 }
 
 describe('script source update safety', () => {
+  test('strict paths preserve renamed service roots and reject duplicate children', async () => {
+    const child = { Name: 'Main' };
+    let children = [child];
+    const service = { Name: 'Renamed', GetChildren: () => ({
+      filter: (predicate: (value: { Name: string }) => boolean) => {
+        const matches = children.filter(predicate);
+        return Object.assign(matches, { size: () => matches.length });
+      },
+    }) };
+    const utils = await loadPluginModule<{ getInstanceByPathStrict(path: string): unknown }>(
+      'studio-plugin/src/modules/Utils.ts', {
+        game: { GetService: () => service },
+        pcall: robloxPcall,
+        error: (message: string) => { throw new Error(message); },
+      },
+    );
+    expect(utils.getInstanceByPathStrict('game.ServerScriptService.Main')).toBe(child);
+    children = [child, { Name: 'Main' }];
+    expect(() => utils.getInstanceByPathStrict('game.ServerScriptService.Main')).toThrow('ambiguous_path');
+    children = [];
+    expect(utils.getInstanceByPathStrict('game.ServerScriptService.Main')).toBeUndefined();
+  });
+
+  test('a source change inside the editor callback is not overwritten by the fallback', async () => {
+    let source = 'original';
+    const directWrite = jest.fn();
+    const instance = {};
+    Object.defineProperty(instance, 'Source', { get: () => source, set: directWrite });
+    const utils = await loadPluginModule<{
+      applyScriptSource(target: object, value: string, expected: string): { success: boolean };
+    }>('studio-plugin/src/modules/Utils.ts', {
+      game: { GetService: () => ({
+        GetEditorSource: () => source,
+        UpdateSourceAsync: (_target: unknown, callback: (current: string) => string) => {
+          source = 'concurrent editor change';
+          source = callback(source);
+        },
+      }) },
+      pcall: robloxPcall,
+      error: (message: string) => { throw new Error(message); },
+      warn: jest.fn(),
+    });
+    expect(utils.applyScriptSource(instance, 'replacement', 'original').success).toBe(false);
+    expect(source).toBe('concurrent editor change');
+    expect(directWrite).not.toHaveBeenCalled();
+  });
+
   test('reads the edit-time source used by Studio search', async () => {
     const getEditorSource = jest.fn(() => 'unsaved editor source');
     const script = { Source: 'saved source' };

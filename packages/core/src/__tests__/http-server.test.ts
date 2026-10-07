@@ -192,14 +192,14 @@ describe('HTTP Server', () => {
         line_range: '42',
         instance_id: 'place:test',
       });
-      expect(editScriptLines).toHaveBeenLastCalledWith('game.ServerScriptService.Main', 'old', 'new', 42, 'place:test');
+      expect(editScriptLines).toHaveBeenLastCalledWith('game.ServerScriptService.Main', 'old', 'new', 42, 'place:test', undefined, undefined);
 
       await TOOL_HANDLERS.delete_script_lines(fakeTools, {
         instancePath: 'game.ServerScriptService.Main',
         line_range: '10-12',
         instance_id: 'place:test',
       });
-      expect(deleteScriptLines).toHaveBeenLastCalledWith('game.ServerScriptService.Main', 10, 12, 'place:test');
+      expect(deleteScriptLines).toHaveBeenLastCalledWith('game.ServerScriptService.Main', 10, 12, 'place:test', undefined, undefined);
 
       await TOOL_HANDLERS.edit_script_lines(fakeTools, {
         instancePath: 'game.ServerScriptService.Main',
@@ -208,7 +208,7 @@ describe('HTTP Server', () => {
         startLine: 99,
         instance_id: 'place:test',
       });
-      expect(editScriptLines).toHaveBeenLastCalledWith('game.ServerScriptService.Main', 'old', 'new', undefined, 'place:test');
+      expect(editScriptLines).toHaveBeenLastCalledWith('game.ServerScriptService.Main', 'old', 'new', undefined, 'place:test', undefined, undefined);
     });
 
     test('script line tools reject unsupported line_range shapes', async () => {

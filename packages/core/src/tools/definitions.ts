@@ -12,6 +12,24 @@ export interface ToolDefinition {
   annotations?: ToolAnnotations;
 }
 
+const SCRIPT_REVISION = { type: 'string', minLength: 1, description: 'Expected full-source revision; rejects stale source.' };
+const SCRIPT_OPERATION = { type: 'string', minLength: 1, maxLength: 128, description: 'Unique ID for mutation recovery on the same Studio instance.' };
+const SCRIPT_EDITS = {
+  type: 'array', minItems: 1, maxItems: 128,
+  description: 'Ordered literal replacements; each must match the updated source.',
+  items: { type: 'object', properties: {
+    old_string: { type: 'string', minLength: 1, description: 'Exact text to replace; must be nonempty.' },
+    new_string: { type: 'string', description: 'Replacement text; may be empty.' },
+    replace_all: { type: 'boolean', default: false, description: 'Replace every match instead of requiring a unique match.' },
+  }, required: ['old_string', 'new_string'], additionalProperties: false },
+};
+const SCRIPT_BATCH_PROPERTIES = {
+  instancePath: { type: 'string', description: 'Unambiguous canonical path of one existing script.' },
+  edits: SCRIPT_EDITS,
+  expected_revision: SCRIPT_REVISION,
+  instance_id: { type: 'string', description: 'Studio process ID when ambiguous.' },
+};
+
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
   // === File & Instance Browsing ===
   // === Place & Service Info ===
@@ -142,6 +160,29 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   // === Calculated/Relative Properties ===
   // === Script Read/Write ===
   {
+    name: 'preview_script_edits', category: 'read',
+    description: 'Use to preview a batch of literal edits to one script without writing.',
+    inputSchema: { type: 'object', properties: SCRIPT_BATCH_PROPERTIES, required: ['instancePath', 'edits'] },
+  },
+  {
+    name: 'edit_script', category: 'write',
+    description: 'Use to apply ordered literal edits to one script with revision protection and one undo recording.',
+    inputSchema: { type: 'object', properties: { ...SCRIPT_BATCH_PROPERTIES, operation_id: SCRIPT_OPERATION }, required: ['instancePath', 'edits', 'expected_revision'] },
+  },
+  {
+    name: 'create_script', category: 'write',
+    description: 'Use to create a script with initial source under an existing parent.',
+    inputSchema: { type: 'object', properties: {
+      parent: { type: 'string', description: 'Existing canonical parent path below game.' },
+      name: { type: 'string', minLength: 1, description: 'Literal child name, at most 100 UTF-8 bytes.' },
+      className: { type: 'string', enum: ['Script', 'LocalScript', 'ModuleScript'], description: 'Script class to create.' },
+      source: { type: 'string', description: 'Initial source, at most 1 MiB.' },
+      enabled: { type: 'boolean', description: 'Enable runnable scripts (default false); omit for ModuleScript.' },
+      instance_id: { type: 'string', description: 'Studio process ID when ambiguous.' },
+      operation_id: SCRIPT_OPERATION,
+    }, required: ['parent', 'name', 'className', 'source'] },
+  },
+  {
     name: 'get_script_source',
     category: 'read',
     description: 'Use to read all or part of a script\'s source.',
@@ -179,6 +220,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
           type: 'string',
           description: 'Complete replacement source.'
         },
+        expected_revision: SCRIPT_REVISION,
+        operation_id: SCRIPT_OPERATION,
         instance_id: {
           type: 'string',
           description: 'Studio process ID when ambiguous.'
@@ -210,6 +253,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
           type: 'string',
           description: 'Start line; required when old_string is not unique.'
         },
+        expected_revision: SCRIPT_REVISION,
+        operation_id: SCRIPT_OPERATION,
         instance_id: {
           type: 'string',
           description: 'Studio process ID when ambiguous.'
@@ -237,6 +282,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
           type: 'string',
           description: 'Source text to insert.'
         },
+        expected_revision: SCRIPT_REVISION,
+        operation_id: SCRIPT_OPERATION,
         instance_id: {
           type: 'string',
           description: 'Studio process ID when ambiguous.'
@@ -260,6 +307,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
           type: 'string',
           description: 'Inclusive "N-M" or "N" range; open ends are invalid.'
         },
+        expected_revision: SCRIPT_REVISION,
+        operation_id: SCRIPT_OPERATION,
         instance_id: {
           type: 'string',
           description: 'Studio process ID when ambiguous.'

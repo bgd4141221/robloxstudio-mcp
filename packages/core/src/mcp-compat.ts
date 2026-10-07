@@ -34,7 +34,11 @@ Tool descriptions explain selection. Input schemas explain arguments. This guide
 
 ## Script changes
 
-- Read the relevant source with get_script_source before changing it.
+- Read the relevant source with get_script_source before changing it. Its revision covers the full source, including portions outside the returned range.
+- For several changes to one script, use preview_script_edits with an ordered edits array, then edit_script with the same edits and expected_revision from the preview. Each literal match must be unique unless replace_all=true. All replacements validate before one source write and one undo recording. Preview is bounded to 120 lines / 12000 bytes and reports truncation.
+- Use create_script with an existing parent, explicit name, className and initial source. Name collisions are rejected; Script and LocalScript start disabled unless enabled=true. New mutations require edit mode; new tools require unambiguous paths.
+- Existing source write tools accept optional expected_revision for stale-read protection. On revision_conflict, read and reconsider the edits before submitting again.
+- Supply operation_id and instance_id on script mutations. After a timeout, query get_request_status before retrying. Identical arguments reuse retained outcomes for the same instance in the current server session (five-minute retention); unknown status is not evidence that no change occurred.
 - Use edit_script_lines, insert_script_lines, or delete_script_lines for focused changes with known line numbers.
 - Use set_script_source only when replacing the whole script.
 - Use find_and_replace_in_scripts with dryRun first when a replacement may affect several scripts.

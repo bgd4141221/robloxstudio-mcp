@@ -55,6 +55,9 @@ const TOOL_PROXY_ENDPOINTS: Record<string, readonly string[]> = {
   get_instance_properties: ['/api/instance-properties'],
   get_project_structure: ['/api/project-structure'],
   set_properties: ['/api/set-properties'],
+  preview_script_edits: ['/api/preview-script-edits'],
+  edit_script: ['/api/edit-script'],
+  create_script: ['/api/create-script'],
   get_script_source: ['/api/get-script-source'],
   set_script_source: ['/api/set-script-source'],
   edit_script_lines: ['/api/edit-script-lines'],
@@ -206,12 +209,15 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
     const { startLine, endLine } = optionalLineRange(body, 'get_script_source');
     return tools.getScriptSource(body.instancePath, startLine, endLine, body.instance_id);
   },
-  set_script_source: (tools, body) => tools.setScriptSource(body.instancePath, body.source, body.instance_id),
-  edit_script_lines: (tools, body) => tools.editScriptLines(body.instancePath, body.old_string, body.new_string, optionalLineAnchor(body, 'edit_script_lines'), body.instance_id),
-  insert_script_lines: (tools, body) => tools.insertScriptLines(body.instancePath, body.afterLine, body.newContent, body.instance_id),
+  preview_script_edits: (tools, body) => tools.previewScriptEdits({ ...body, instance_id: body.instance_id }),
+  edit_script: (tools, body) => tools.editScript({ ...body, instance_id: body.instance_id }),
+  create_script: (tools, body) => tools.createScript({ ...body, instance_id: body.instance_id }),
+  set_script_source: (tools, body) => tools.setScriptSource(body.instancePath, body.source, body.instance_id, body.expected_revision, body.operation_id),
+  edit_script_lines: (tools, body) => tools.editScriptLines(body.instancePath, body.old_string, body.new_string, optionalLineAnchor(body, 'edit_script_lines'), body.instance_id, body.expected_revision, body.operation_id),
+  insert_script_lines: (tools, body) => tools.insertScriptLines(body.instancePath, body.afterLine, body.newContent, body.instance_id, body.expected_revision, body.operation_id),
   delete_script_lines: (tools, body) => {
     const { startLine, endLine } = requiredClosedLineRange(body, 'delete_script_lines');
-    return tools.deleteScriptLines(body.instancePath, startLine, endLine, body.instance_id);
+    return tools.deleteScriptLines(body.instancePath, startLine, endLine, body.instance_id, body.expected_revision, body.operation_id);
   },
   get_attributes: (tools, body) => tools.getAttributes(body.instancePath, body.instance_id),
   selection: (tools, body) => tools.selection(body.action, body, body.instance_id),

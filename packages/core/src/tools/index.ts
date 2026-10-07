@@ -1,3 +1,4 @@
+import { scriptEditingPayload, validateScriptRevision } from '../script-editing.js';
 import { readRbxmInput } from '../rbxm-input.js';
 import { StudioHttpClient } from './studio-client.js';
 import { BridgeService, RoutingFailure } from '../bridge-service.js';
@@ -1781,6 +1782,7 @@ export class RobloxStudioTools {
       path: pathStr,
       className: response.className,
       lineCount: response.lineCount,
+      ...(response.revision ? { revision: response.revision } : {}),
       ...(showRange ? { startLine: response.startLine, endLine: response.endLine } : {}),
       ...(response.enabled === false ? { enabled: false } : {}),
       ...(response.truncated ? { truncated: true } : {}),
@@ -1789,11 +1791,24 @@ export class RobloxStudioTools {
     });
   }
 
-  async setScriptSource(instancePath: string, source: string, instance_id?: string) {
+  async previewScriptEdits(request: Record<string, unknown>) {
+    return this._textResult(await this._callSingle('/api/preview-script-edits', scriptEditingPayload(request, 'preview'), 'edit', request.instance_id as string | undefined));
+  }
+
+  async editScript(request: Record<string, unknown>) {
+    return this._textResult(await this._callSingle('/api/edit-script', scriptEditingPayload(request, 'edit'), 'edit', request.instance_id as string | undefined, undefined, undefined, request.operation_id as string | undefined));
+  }
+
+  async createScript(request: Record<string, unknown>) {
+    return this._textResult(await this._callSingle('/api/create-script', scriptEditingPayload(request, 'create'), 'edit', request.instance_id as string | undefined, undefined, undefined, request.operation_id as string | undefined));
+  }
+
+  async setScriptSource(instancePath: string, source: string, instance_id?: string, expected_revision?: string, operation_id?: string) {
+    validateScriptRevision(expected_revision);
     if (!instancePath || typeof source !== 'string') {
       throw new Error('Instance path and source code string are required for set_script_source');
     }
-    const response = await this._callSingle('/api/set-script-source', { instancePath, source }, undefined, instance_id);
+    const response = await this._callSingle('/api/set-script-source', { instancePath, source, expected_revision }, undefined, instance_id, undefined, undefined, operation_id);
     return {
       content: [
         {
@@ -1805,13 +1820,14 @@ export class RobloxStudioTools {
   }
 
 
-  async editScriptLines(instancePath: string, oldString: string, newString: string, startLine?: number, instance_id?: string) {
+  async editScriptLines(instancePath: string, oldString: string, newString: string, startLine?: number, instance_id?: string, expected_revision?: string, operation_id?: string) {
+    validateScriptRevision(expected_revision);
     if (!instancePath || typeof oldString !== 'string' || typeof newString !== 'string') {
       throw new Error('Instance path, old_string, and new_string are required for edit_script_lines');
     }
-    const payload: Record<string, unknown> = { instancePath, old_string: oldString, new_string: newString };
+    const payload: Record<string, unknown> = { instancePath, old_string: oldString, new_string: newString, expected_revision };
     if (startLine !== undefined) payload.startLine = startLine;
-    const response = await this._callSingle('/api/edit-script-lines', payload, undefined, instance_id);
+    const response = await this._callSingle('/api/edit-script-lines', payload, undefined, instance_id, undefined, undefined, operation_id);
     return {
       content: [
         {
@@ -1822,11 +1838,12 @@ export class RobloxStudioTools {
     };
   }
 
-  async insertScriptLines(instancePath: string, afterLine: number, newContent: string, instance_id?: string) {
+  async insertScriptLines(instancePath: string, afterLine: number, newContent: string, instance_id?: string, expected_revision?: string, operation_id?: string) {
+    validateScriptRevision(expected_revision);
     if (!instancePath || typeof newContent !== 'string') {
       throw new Error('Instance path and newContent are required for insert_script_lines');
     }
-    const response = await this._callSingle('/api/insert-script-lines', { instancePath, afterLine: afterLine || 0, newContent }, undefined, instance_id);
+    const response = await this._callSingle('/api/insert-script-lines', { instancePath, afterLine: afterLine || 0, newContent, expected_revision }, undefined, instance_id, undefined, undefined, operation_id);
     return {
       content: [
         {
@@ -1837,11 +1854,12 @@ export class RobloxStudioTools {
     };
   }
 
-  async deleteScriptLines(instancePath: string, startLine: number, endLine: number, instance_id?: string) {
+  async deleteScriptLines(instancePath: string, startLine: number, endLine: number, instance_id?: string, expected_revision?: string, operation_id?: string) {
+    validateScriptRevision(expected_revision);
     if (!instancePath || !startLine || !endLine) {
       throw new Error('Instance path, startLine, and endLine are required for delete_script_lines');
     }
-    const response = await this._callSingle('/api/delete-script-lines', { instancePath, startLine, endLine }, undefined, instance_id);
+    const response = await this._callSingle('/api/delete-script-lines', { instancePath, startLine, endLine, expected_revision }, undefined, instance_id, undefined, undefined, operation_id);
     return {
       content: [
         {

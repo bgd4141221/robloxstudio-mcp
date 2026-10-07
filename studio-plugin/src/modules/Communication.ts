@@ -6,6 +6,7 @@ import { cleanupEditBridgeArtifacts } from "./EvalBridges";
 import QueryHandlers from "./handlers/QueryHandlers";
 import PropertyHandlers from "./handlers/PropertyHandlers";
 import ScriptHandlers from "./handlers/ScriptHandlers";
+import ScriptEditingHandlers from "./handlers/ScriptEditingHandlers";
 import MetadataHandlers from "./handlers/MetadataHandlers";
 import TestHandlers from "./handlers/TestHandlers";
 import AssetHandlers from "./handlers/AssetHandlers";
@@ -54,6 +55,9 @@ const routeMap: Record<string, Handler> = {
 
     "/api/set-properties": PropertyHandlers.setProperties,
 
+	"/api/preview-script-edits": ScriptEditingHandlers.previewScriptEdits,
+	"/api/edit-script": ScriptEditingHandlers.editScript,
+	"/api/create-script": ScriptEditingHandlers.createScript,
 	"/api/get-script-source": ScriptHandlers.getScriptSource,
 	"/api/set-script-source": ScriptHandlers.setScriptSource,
 	"/api/edit-script-lines": ScriptHandlers.editScriptLines,

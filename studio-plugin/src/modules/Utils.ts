@@ -180,6 +180,25 @@ function getInstanceByPath(path: string): Instance | undefined {
 	return current;
 }
 
+// New editing tools refuse ambiguous sibling names instead of selecting an arbitrary child.
+function getInstanceByPathStrict(path: string): Instance | undefined {
+	const parts = parseInstancePath(path);
+	if (parts === undefined) return undefined;
+	let current: Instance = game;
+	for (let i = 0; i < parts.size(); i++) {
+		// Canonical service roots use class names even when the service was renamed.
+		if (i === 0) {
+			const [ok, service] = pcall(() => game.GetService(parts[i] as keyof Services));
+			if (ok && service) { current = service as Instance; continue; }
+		}
+		const matches = current.GetChildren().filter(child => child.Name === parts[i]);
+		if (matches.size() > 1) error(`ambiguous_path: multiple children named ${parts[i]}`);
+		if (matches.size() === 0) return undefined;
+		current = matches[0];
+	}
+	return current;
+}
+
 function splitLines(source: string): LuaTuple<[string[], boolean]> {
 	const normalized = ((source ?? "") as string).gsub("\r\n", "\n")[0].gsub("\r", "\n")[0];
 	const endsWithNewline = normalized.sub(-1) === "\n";
@@ -510,6 +529,7 @@ export = {
 	safeCall,
 	getInstancePath,
 	getInstanceByPath,
+	getInstanceByPathStrict,
 	splitLines,
 	joinLines,
 	readScriptSource,
